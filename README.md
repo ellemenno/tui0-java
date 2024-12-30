@@ -1,6 +1,6 @@
-# tui0-java
+# `tui0`-java
 
-a starting point in java for creating terminal apps handling non-canonical input and rendering their user interface via text.
+a starting point for creating terminal apps handling non-canonical input and rendering their user interface via text.
 
 this template implements some opinions about what basic functionality such an app should have:
 - game loop with consistent time deltas
@@ -21,12 +21,12 @@ many of these features are built upon functionality provided by the [lanterna] l
 
 ### compile
 
-nix `javac -cp '.:lib/*' TUI0.java`
+nix `javac -cp '.:lib/*' TUI0.java` <br>
 win `javac -cp .;lib/* TUI0.java`
 
 ### run
 
-nix `java -cp '.:lib/*' TUI0.java`
+nix `java -cp '.:lib/*' TUI0.java` <br>
 win `java -cp .;lib/* TUI0.java`
 
 
