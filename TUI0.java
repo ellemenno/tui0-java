@@ -1,13 +1,9 @@
 import java.io.IOException;
 import java.util.Random;
 
-import com.googlecode.lanterna.SGR;
-import com.googlecode.lanterna.Symbols;
-import com.googlecode.lanterna.TerminalPosition;
 import com.googlecode.lanterna.TerminalSize;
 import com.googlecode.lanterna.TextCharacter;
 import com.googlecode.lanterna.TextColor;
-import com.googlecode.lanterna.graphics.TextGraphics;
 import com.googlecode.lanterna.input.KeyStroke;
 import com.googlecode.lanterna.input.KeyType;
 import com.googlecode.lanterna.screen.Screen;
@@ -32,6 +28,7 @@ public class TUI0 {
   private static long fpsTimer = 0;
   private static int frames = 0;
   private static int fps = 0;
+
 
   private static Screen getTerminalScreen() throws IOException {
     DefaultTerminalFactory defaultTerminalFactory = new DefaultTerminalFactory();
@@ -60,51 +57,6 @@ public class TUI0 {
       TextColor.ANSI.values()[random.nextInt(TextColor.ANSI.values().length)]
     );
     screen.setCharacter(c, r, tc[0]);
-  }
-
-  private static void infoBox(Screen screen, String[] lines) {
-    int h = lines.length;
-    int w = 0, n = 0;
-    for (String ln : lines) { n = ln.length(); if (n > w) { w = n; } }
-
-    TerminalSize boxSize = new TerminalSize(w + 2, h + 2);
-    TerminalPosition boxTopLeft = new TerminalPosition(1, 1);
-    TerminalPosition boxTopRight = boxTopLeft.withRelativeColumn(boxSize.getColumns() - 1);
-
-    TextGraphics textGraphics = screen.newTextGraphics();
-    // background fill
-    textGraphics.fillRectangle(boxTopLeft, boxSize, ' ');
-    // left border
-    textGraphics.drawLine(
-      boxTopLeft.withRelativeRow(1),
-      boxTopLeft.withRelativeRow(boxSize.getRows() - 2),
-      Symbols.DOUBLE_LINE_VERTICAL);
-    // top border
-    textGraphics.drawLine(
-      boxTopLeft.withRelativeColumn(1),
-      boxTopLeft.withRelativeColumn(boxSize.getColumns() - 2),
-      Symbols.DOUBLE_LINE_HORIZONTAL);
-    // right border
-    textGraphics.drawLine(
-      boxTopRight.withRelativeRow(1),
-      boxTopRight.withRelativeRow(boxSize.getRows() - 2),
-      Symbols.DOUBLE_LINE_VERTICAL);
-    // bottom border
-    textGraphics.drawLine(
-      boxTopLeft.withRelativeRow(h + 1).withRelativeColumn(1),
-      boxTopLeft.withRelativeRow(h + 1).withRelativeColumn(boxSize.getColumns() - 2),
-      Symbols.DOUBLE_LINE_HORIZONTAL);
-    // border corners
-    textGraphics.setCharacter(boxTopLeft, Symbols.DOUBLE_LINE_TOP_LEFT_CORNER);
-    textGraphics.setCharacter(boxTopRight, Symbols.DOUBLE_LINE_TOP_RIGHT_CORNER);
-    textGraphics.setCharacter(boxTopRight.withRelativeRow(h + 1), Symbols.DOUBLE_LINE_BOTTOM_RIGHT_CORNER);
-    textGraphics.setCharacter(boxTopLeft.withRelativeRow(h + 1), Symbols.DOUBLE_LINE_BOTTOM_LEFT_CORNER);
-    // message lines
-    n = 0;
-    for (String ln : lines) {
-      textGraphics.putString(boxTopLeft.withRelative(1, n + 1), ln);
-      n++;
-    }
   }
 
   private static void updateState(AppState state) throws IOException {
@@ -144,7 +96,7 @@ public class TUI0 {
       String.format("Frame Rate %dsec: %d", fpsUpdateSec, fps),
       String.format("Frame Sleep: %2dms", sleep),
     };
-    infoBox(state.screen, info);
+    UI.infoBox(state.screen, info);
   }
 
   private static long elapsedFrameNS() {
