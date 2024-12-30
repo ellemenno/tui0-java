@@ -15,7 +15,9 @@ import com.googlecode.lanterna.screen.TerminalScreen;
 import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
 import com.googlecode.lanterna.terminal.Terminal;
 
+
 public class TUI0 {
+  private static final AppState state = new AppState();
   private static final int FPS = 60; // target frame rate
   private static final long NSPF = (long) (1e+9/FPS); // nanoseconds alotted per frame
   private static final Random random = new Random();
@@ -27,13 +29,11 @@ public class TUI0 {
   private static long sleepSum = 0;
   private static long[] sleepAvg = new long[FPS*fpsUpdateSec]; // keep a moving average of sleep time
   private static int sleepSampleIndex = 0;
-  private static TerminalSize terminalSize = null;
-  private static KeyStroke lastKey = null;
   private static long fpsTimer = 0;
   private static int frames = 0;
   private static int fps = 0;
 
-  private static Screen makeNewScreen() throws IOException {
+  private static Screen getTerminalScreen() throws IOException {
     DefaultTerminalFactory defaultTerminalFactory = new DefaultTerminalFactory();
     Terminal terminal = defaultTerminalFactory.createTerminal();
     Screen screen = new TerminalScreen(terminal);
@@ -51,9 +51,9 @@ public class TUI0 {
     return false;
   }
 
-  private static void confetti(Screen screen) {
-    int c = random.nextInt(terminalSize.getColumns());
-    int r = random.nextInt(terminalSize.getRows());
+  private static void confetti(Screen screen, TerminalSize size) {
+    int c = random.nextInt(size.getColumns());
+    int r = random.nextInt(size.getRows());
     TextCharacter[] tc = TextCharacter.fromCharacter(
       ' ',
       TextColor.ANSI.DEFAULT,
@@ -107,13 +107,13 @@ public class TUI0 {
     }
   }
 
-  private static void updateState(Screen screen) throws IOException {
+  private static void updateState(AppState state) throws IOException {
     // screen dimensions
-    TerminalSize newSize = screen.doResizeIfNecessary();
-    if(newSize != null) { terminalSize = newSize; }
+    TerminalSize newSize = state.screen.doResizeIfNecessary();
+    if(newSize != null) { state.terminalSize = newSize; }
     // keyboard input
-    KeyStroke keyStroke = screen.pollInput();
-    if(keyStroke != null) { lastKey = keyStroke; }
+    KeyStroke keyStroke = state.screen.pollInput();
+    if(keyStroke != null) { state.lastKey = keyStroke; }
     // frame rate
     frames++;
     long now = System.nanoTime();
@@ -133,18 +133,18 @@ public class TUI0 {
     // else { sleep = (long) (sleep * 0.99 + sleepingMS * 0.01); }
   }
 
-  private static void renderState(Screen screen) {
+  private static void renderState(AppState state) {
     // update background
     int i = 0, nfetti = 50;
-    for (i = 0; i < nfetti; i++) { confetti(screen); }
+    for (i = 0; i < nfetti; i++) { confetti(state.screen, state.terminalSize); }
     // redraw info box
     String[] info = {
-      String.format("Terminal Size: %s", terminalSize),
-      String.format("Last Key: %s", (lastKey == null) ? "<pending>" : lastKey.toString()),
+      String.format("Terminal Size: %s", state.terminalSize),
+      String.format("Last Key: %s", (state.lastKey == null) ? "<pending>" : state.lastKey.toString()),
       String.format("Frame Rate %dsec: %d", fpsUpdateSec, fps),
       String.format("Frame Sleep: %2dms", sleep),
     };
-    infoBox(screen, info);
+    infoBox(state.screen, info);
   }
 
   private static long elapsedFrameNS() {
@@ -155,19 +155,18 @@ public class TUI0 {
   }
 
   public static void main(String[] args) throws InterruptedException {
-    Screen screen = null;
     boolean running = true;
     long frameNS = 0;
     try {
-      screen = makeNewScreen();
-      terminalSize = screen.getTerminalSize();
+      state.screen = getTerminalScreen();
+      state.terminalSize = state.screen.getTerminalSize();
       startTime = System.nanoTime();
       lastFrameNS = startTime;
       while(running) {
-        updateState(screen); // refresh internal values
-        renderState(screen); // paint to back buffer
-        screen.refresh(); // copy back buffer deltas to front
-        if(userIsQuitting(lastKey)) { running = false; }
+        updateState(state); // refresh internal values
+        renderState(state); // paint to back buffer
+        state.screen.refresh(); // copy back buffer deltas to front
+        if(userIsQuitting(state.lastKey)) { running = false; }
         frameNS = elapsedFrameNS();
         sleepingMS = (NSPF > frameNS) ? (long) ((NSPF - frameNS) * 1e-6) : 0;
         Thread.sleep(sleepingMS);
@@ -175,8 +174,8 @@ public class TUI0 {
     }
     catch(IOException e) { e.printStackTrace(); }
     finally {
-      if(screen != null) {
-        try { screen.close(); }
+      if(state.screen != null) {
+        try { state.screen.close(); }
         catch(IOException e) { e.printStackTrace(); }
       }
     }
