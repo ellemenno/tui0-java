@@ -14,20 +14,7 @@ import com.googlecode.lanterna.terminal.Terminal;
 
 public class TUI0 {
   private static final AppState state = new AppState();
-  private static final int FPS = 60; // target frame rate
-  private static final long NSPF = (long) (1e+9/FPS); // nanoseconds alotted per frame
   private static final Random random = new Random();
-  private static final int fpsUpdateSec = 3;
-  private static long startTime = 0;
-  private static long lastFrameNS = 0;
-  private static long sleepingMS = 0;
-  private static long sleep = 0;
-  private static long sleepSum = 0;
-  private static long[] sleepAvg = new long[FPS*fpsUpdateSec]; // keep a moving average of sleep time
-  private static int sleepSampleIndex = 0;
-  private static long fpsTimer = 0;
-  private static int frames = 0;
-  private static int fps = 0;
 
 
   private static Screen getTerminalScreen() throws IOException {
@@ -67,22 +54,7 @@ public class TUI0 {
     KeyStroke keyStroke = state.screen.pollInput();
     if(keyStroke != null) { state.lastKey = keyStroke; }
     // frame rate
-    frames++;
-    long now = System.nanoTime();
-    // sleep average
-    sleepSum -= sleepAvg[sleepSampleIndex];
-    sleepSum += sleepingMS;
-    sleepAvg[sleepSampleIndex] = sleepingMS;
-    sleepSampleIndex = (sleepSampleIndex+1) % sleepAvg.length;
-
-    if(fpsTimer + fpsUpdateSec*1e+9 < now) {
-      fps = (int) (frames / ((now-fpsTimer)*1e-9) / fpsUpdateSec);
-      fpsTimer = (long) (now + fpsUpdateSec*1e+9);
-      frames = 0;
-      sleep = (int) (sleepSum / sleepAvg.length);
-    }
-    // if (sleep == 0) { sleep = sleepingMS; }
-    // else { sleep = (long) (sleep * 0.99 + sleepingMS * 0.01); }
+    state.frameTimer.nextFrame();
   }
 
   private static void renderState(AppState state) {
@@ -93,17 +65,10 @@ public class TUI0 {
     String[] info = {
       String.format("Terminal Size: %s", state.terminalSize),
       String.format("Last Key: %s", (state.lastKey == null) ? "<pending>" : state.lastKey.toString()),
-      String.format("Frame Rate %dsec: %d", fpsUpdateSec, fps),
-      String.format("Frame Sleep: %2dms", sleep),
+      String.format("Frame Rate %dsec: %d", state.frameTimer.getFpsRefreshSec(), state.frameTimer.getFps()),
+      String.format("Frame Sleep: %2dms", state.frameTimer.getSleepAvgMS()),
     };
     UI.infoBox(state.screen, info);
-  }
-
-  private static long elapsedFrameNS() {
-    long now = System.nanoTime();
-    long elapsed = now - lastFrameNS;
-    lastFrameNS = now;
-    return elapsed;
   }
 
   public static void main(String[] args) throws InterruptedException {
@@ -112,16 +77,14 @@ public class TUI0 {
     try {
       state.screen = getTerminalScreen();
       state.terminalSize = state.screen.getTerminalSize();
-      startTime = System.nanoTime();
-      lastFrameNS = startTime;
+      state.frameTimer = new FrameTimer(60, 3);
+      state.frameTimer.start();
       while(running) {
         updateState(state); // refresh internal values
         renderState(state); // paint to back buffer
         state.screen.refresh(); // copy back buffer deltas to front
         if(userIsQuitting(state.lastKey)) { running = false; }
-        frameNS = elapsedFrameNS();
-        sleepingMS = (NSPF > frameNS) ? (long) ((NSPF - frameNS) * 1e-6) : 0;
-        Thread.sleep(sleepingMS);
+        Thread.sleep(state.frameTimer.getSleepingMS());
       }
     }
     catch(IOException e) { e.printStackTrace(); }
