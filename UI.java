@@ -32,6 +32,9 @@ public class UI {
   }
 
   public static void infoBox(Screen screen, String[] lines, String border) {
+    if(border.length() != 8) {
+      throw new IllegalArgumentException("border string must be 8 characters");
+    }
     int h = lines.length;
     int w = 0, n = 0;
     for (String ln : lines) { n = ln.length(); if (n > w) { w = n; } }
